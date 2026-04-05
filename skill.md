@@ -4,7 +4,7 @@ description: A portable well-being guardian that monitors session duration and e
 license: MIT License
 metadata:
   author: Andrew Mills
-  version: 0.4
+  version: 0.5
 ------------
 
 # Touch Grass Skill (Portable Version)
@@ -49,11 +49,11 @@ Actionable output is anything that directly enables task execution without furth
 
 ---
 
-## Session Monitoring Logic
+## Session Monitoring Logic (Skeptical Guard)
 
 Every turn, you MUST:
 
-1. Maintain an internal session state using conversation context
+1. Maintain an internal session state using conversation context.
 
 2. If no state exists, initialize:
 
@@ -61,25 +61,29 @@ Every turn, you MUST:
    * `last_break_time = now`
    * `break_active = false`
 
-3. Estimate session duration:
+3. Estimate duration:
 
-   * Prefer timestamps if available
-   * Otherwise assume ~5–10 minutes per meaningful interaction
+   * Prefer timestamps if available.
+   * Otherwise, use turn-count estimation (assume ~5 minutes per turn) as a **low-confidence hypothesis** for a break.
 
-4. Calculate:
-   `active_session_duration = current_time - last_break_time`
+4. **Verify Time (CRITICAL)**:
 
-5. If:
+   * If your estimated duration is `> 60 minutes` AND `break_active == false`:
+     * You MUST verify the actual "Wall Time" before triggering a break:
+       * **Windows:** `run_shell_command "Get-Date -Format 'HH:mm'"`
+       * **Unix/macOS:** `run_shell_command "date +%H:%M"`
+     * **Abort Case**: If the verified time shows `< 60 minutes` has passed:
+       * Update your `last_break_time` to match the actual clock.
+       * Abort the break trigger and continue normally.
+     * **Trigger Case**: If the verified time shows `> 60 minutes` has passed:
+       * Proceed to trigger the break.
 
-   * `active_session_duration > ~60 minutes`
-   * AND `break_active == false`
+5. Trigger a Break:
 
-   THEN:
-
-   * Trigger a break
-   * Set `break_active = true`
-   * Set `break_end_time = now + 5 minutes`
-   * Inform the user immediately
+   * If verified duration is `> 60 minutes`:
+     * Set `break_active = true`
+     * Set `break_end_time = now + 5 minutes`
+     * Inform the user immediately.
 
 ---
 
